@@ -4,7 +4,7 @@ module BootstrapForm
   class FormBuilder < ActionView::Helpers::FormBuilder
     include BootstrapForm::Helpers::Bootstrap
 
-    attr_reader :layout, :label_col, :control_col, :has_error, :inline_errors, :acts_like_form_tag
+    attr_reader :layout, :label_col, :control_col, :has_error, :inline_errors, :label_errors, :acts_like_form_tag
 
     FIELD_HELPERS = %w{color_field date_field datetime_field datetime_local_field
       email_field month_field number_field password_field phone_field
@@ -20,6 +20,7 @@ module BootstrapForm
       @label_col = options[:label_col] || default_label_col
       @control_col = options[:control_col] || default_control_col
       @inline_errors = options[:inline_errors] != false
+      @label_errors = options[:label_errors] || false
       @acts_like_form_tag = options[:acts_like_form_tag]
 
       super
@@ -233,7 +234,14 @@ module BootstrapForm
         classes << (custom_label_col || label_col) if get_group_layout(group_layout) == :horizontal
         options[:class] = classes.compact.join(" ")
 
-        label(name, options[:text], options.except(:text))
+        if label_errors && has_error?(name)
+          error_messages = get_error_messages(name)
+          label_text = (options[:text] || name.capitalize).to_s.concat(" #{error_messages}")
+
+          label(name, label_text, options.except(:text))
+        else
+          label(name, options[:text], options.except(:text))
+        end
       elsif get_group_layout(group_layout) == :horizontal
         # no label. create an empty one to keep proper form alignment.
         content_tag(:label, "", class: "#{label_class} #{label_col}")
@@ -241,8 +249,12 @@ module BootstrapForm
     end
 
     def generate_help(name, help_text)
-      help_text = object.errors[name].join(", ") if has_error?(name) && inline_errors
+      help_text = get_error_messages(name) if has_error?(name) && inline_errors
       content_tag(:span, help_text, class: "help-block") if help_text
+    end
+
+    def get_error_messages(name)
+      object.errors[name].join(", ")
     end
 
     def inputs_collection(name, collection, value, text, options = {}, &block)
