@@ -138,13 +138,18 @@ module BootstrapForm
       options[:class] = ["form-group", options[:class]].compact.join(' ')
       options[:class] << " #{error_class}" if has_error?(name)
 
-      content_tag(:div, options.except(:id, :label, :help, :label_col, :control_col, :layout)) do
-        label = generate_label(options[:id], name, options[:label], options[:label_col], options[:layout])
-        control_and_help = capture(&block).concat(generate_help(name, options[:help]))
-        if get_group_layout(options[:layout]) == :horizontal
-          control_and_help = content_tag(:div, control_and_help, class: (options[:control_col] || control_col))
-        end
+      label = generate_label(options[:id], name, options[:label], options[:label_col], options[:layout])
+      control_and_help = capture(&block).concat(generate_help(name, options[:help]))
+      if get_group_layout(options[:layout]) == :horizontal
+        control_and_help = content_tag(:div, control_and_help, class: (options[:control_col] || control_col))
+      end
+
+      if options[:no_form_group]
         concat(label).concat(control_and_help)
+      else
+        content_tag(:div, options.except(:id, :label, :help, :label_col, :control_col, :layout)) do
+          concat(label).concat(control_and_help)
+        end
       end
     end
 
@@ -215,8 +220,9 @@ module BootstrapForm
       label_col = options.delete(:label_col)
       control_col = options.delete(:control_col)
       layout = get_group_layout(options.delete(:layout))
+      no_form_group = options.delete(:no_form_group)
 
-      form_group(method, id: options[:id], label: { text: label, class: label_class }, help: help, label_col: label_col, control_col: control_col, layout: layout) do
+      form_group(method, id: options[:id], label: { text: label, class: label_class }, help: help, label_col: label_col, control_col: control_col, layout: layout, no_form_group: no_form_group) do
         yield
       end
     end
