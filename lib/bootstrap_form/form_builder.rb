@@ -270,11 +270,7 @@ module BootstrapForm
       layout = get_group_layout(options.delete(:layout))
       no_form_group = options.delete(:no_form_group)
 
-<<<<<<< HEAD
-      form_group(method, id: options[:id], label: { text: label, class: label_class }, help: help, label_col: label_col, control_col: control_col, layout: layout, no_form_group: no_form_group) do
-=======
-      form_group(method, id: options[:id], label: { text: label, class: label_class }, help: help, icon: icon, label_col: label_col, control_col: control_col, layout: layout, class: wrapper_class) do
->>>>>>> upstream/master
+      form_group(method, id: options[:id], label: { text: label, class: label_class }, help: help, icon: icon, label_col: label_col, control_col: control_col, layout: layout, class: wrapper_class, no_form_group: no_form_group) do
         yield
       end
     end
@@ -286,37 +282,19 @@ module BootstrapForm
     end
 
     def generate_label(id, name, options, custom_label_col, group_layout)
-<<<<<<< HEAD
-      if options
-        options[:for] = id if acts_like_form_tag
-        classes = [options[:class], label_class]
-        classes << (custom_label_col || label_col) if get_group_layout(group_layout) == :horizontal
-        options[:class] = classes.compact.join(" ")
-
-        if label_errors && has_error?(name)
-          error_messages = get_error_messages(name)
-          label_text = (options[:text] || name.capitalize).to_s.concat(" #{error_messages}")
-
-          label(name, label_text, options.except(:text))
-        else
-          label(name, options[:text], options.except(:text))
-        end
-      elsif get_group_layout(group_layout) == :horizontal
-        # no label. create an empty one to keep proper form alignment.
-        content_tag(:label, "", class: "#{label_class} #{label_col}")
-      end
-    end
-
-    def generate_help(name, help_text)
-      help_text = get_error_messages(name) if has_error?(name) && inline_errors
-      content_tag(:span, help_text, class: "help-block") if help_text
-=======
       options[:for] = id if acts_like_form_tag
       classes = [options[:class], label_class]
       classes << (custom_label_col || label_col) if get_group_layout(group_layout) == :horizontal
       options[:class] = classes.compact.join(" ")
 
-      label(name, options[:text], options.except(:text))
+      if label_errors && has_error?(name)
+        error_messages = get_error_messages(name)
+        label_text = (options[:text] || name.capitalize).to_s.concat(" #{error_messages}")
+
+        label(name, label_text, options.except(:text))
+      else
+        label(name, options[:text], options.except(:text))
+      end
     end
 
     def generate_help(name, help_text)
@@ -329,7 +307,6 @@ module BootstrapForm
 
     def generate_icon(icon)
       content_tag(:span, "", class: "glyphicon glyphicon-#{icon} form-control-feedback")
->>>>>>> upstream/master
     end
 
     def get_error_messages(name)
