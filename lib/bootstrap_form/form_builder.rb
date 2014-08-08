@@ -164,7 +164,6 @@ module BootstrapForm
       options[:class] << " #{feedback_class}" if options[:icon]
 
       label = generate_label(options[:id], name, options[:label], options[:label_col], options[:layout]) if options[:label]
-      control_and_help = capture(&block).concat(generate_help(name, options[:help]))
 
       control = capture(&block).to_s
       control.concat(generate_help(name, options[:help]).to_s)
