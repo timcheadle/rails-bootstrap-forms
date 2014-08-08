@@ -1,9 +1,23 @@
 ## Pending Release
 
+Bugfixes:
+  - Fixed an exception raised when form_group block returns nil (#111)
+  - Fixed an exception on human_attribute_name when using bootstrap_form_tag (#115)
+  - Set offset in form_group without label in horizontal layout (#94, @datWav)
+
 Features:
 
   - Added the ability to append/prepend buttons (@retoo)
   - Added support for time_zone_select
+  - Accept multiple values, and objects as well, on `collection_check_boxes`
+    checked option (#114)
+  - Added support for hidding attribute name in errors_on helper (@datWav)
+  - Added support for additional class to the wrapper form_group by a field (@datWav)
+  - Support showing error summaries when inline_errors is enabled (@rosswilson)
+  - Name is now optional when creating static controls
+  - Keep original form helper methods with _without_bootstrap suffix (#123, @a2ikm)
+  - Added glyphicon support
+  - Added i18n support for help messages (#122, @huynhquancam)
 
 ## 2.1.1 (2014-04-20)
 

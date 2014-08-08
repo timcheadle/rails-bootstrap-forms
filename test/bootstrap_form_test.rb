@@ -7,6 +7,7 @@ class BootstrapFormTest < ActionView::TestCase
     @user = User.new(email: 'steve@example.com', password: 'secret', comments: 'my comment')
     @builder = BootstrapForm::FormBuilder.new(:user, @user, self, {})
     @horizontal_builder = BootstrapForm::FormBuilder.new(:user, @user, self, { layout: :horizontal, label_col: "col-sm-2", control_col: "col-sm-10" })
+    I18n.backend.store_translations(:en, {activerecord: {help: {user: {password: "A good password should be at least six characters long"}}}})
   end
 
   test "default-style forms" do
@@ -39,17 +40,22 @@ class BootstrapFormTest < ActionView::TestCase
     assert_equal expected, bootstrap_form_tag(url: '/users') { |f| f.text_field :email, name: 'NAME', id: "ID" }
   end
 
+  test "bootstrap_form_tag allows an empty name for checkboxes" do
+    expected = %{<form accept-charset="UTF-8" action="/users" method="post"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /></div><div class="checkbox"><label for="_misc"><input name="[misc]" type="hidden" value="0" /><input id="_misc" name="[misc]" type="checkbox" value="1" /> Misc</label></div></form>}
+    assert_equal expected, bootstrap_form_tag(url: '/users') { |f| f.check_box :misc }
+  end
+
   test "alert message is wrapped correctly" do
     @user.email = nil
     @user.valid?
-    expected = %{<div class="alert alert-danger"><p>Please fix the following errors:</p></div>}
+    expected = %{<div class="alert alert-danger"><p>Please fix the following errors:</p><ul class="rails-bootstrap-forms-error-summary"><li>Email can&#39;t be blank</li><li>Email is too short (minimum is 5 characters)</li><li>Terms must be accepted</li></ul></div>}
     assert_equal expected, @builder.alert_message('Please fix the following errors:')
   end
 
   test "changing the class name for the alert message" do
     @user.email = nil
     @user.valid?
-    expected = %{<div class="my-css-class"><p>Please fix the following errors:</p></div>}
+    expected = %{<div class="my-css-class"><p>Please fix the following errors:</p><ul class="rails-bootstrap-forms-error-summary"><li>Email can&#39;t be blank</li><li>Email is too short (minimum is 5 characters)</li><li>Terms must be accepted</li></ul></div>}
     assert_equal expected, @builder.alert_message('Please fix the following errors:', class: 'my-css-class')
   end
 
@@ -74,6 +80,18 @@ class BootstrapFormTest < ActionView::TestCase
     end
 
     expected = %{<form accept-charset="UTF-8" action="/users" class="new_user" id="new_user" method="post"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /></div><div class="alert alert-danger"><p>Please fix the following errors:</p></div></form>}
+    assert_equal expected, output
+  end
+
+  test "alert_message allows the error_summary to be turned on with inline_errors also turned on" do
+    @user.email = nil
+    @user.valid?
+
+    output = bootstrap_form_for(@user, inline_errors: true) do |f|
+      f.alert_message('Please fix the following errors:', error_summary: true)
+    end
+
+    expected = %{<form accept-charset="UTF-8" action="/users" class="new_user" id="new_user" method="post"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /></div><div class="alert alert-danger"><p>Please fix the following errors:</p><ul class="rails-bootstrap-forms-error-summary"><li>Email can&#39;t be blank</li><li>Email is too short (minimum is 5 characters)</li><li>Terms must be accepted</li></ul></div></form>}
     assert_equal expected, output
   end
 
@@ -139,7 +157,7 @@ class BootstrapFormTest < ActionView::TestCase
   end
 
   test "password fields are wrapped correctly" do
-    expected = %{<div class="form-group"><label class="control-label" for="user_password">Password</label><input class="form-control" id="user_password" name="user[password]" type="password" /></div>}
+    expected = %{<div class="form-group"><label class="control-label" for="user_password">Password</label><input class="form-control" id="user_password" name="user[password]" type="password" /><span class="help-block">A good password should be at least six characters long</span></div>}
     assert_equal expected, @builder.password_field(:password)
   end
 
@@ -391,6 +409,16 @@ class BootstrapFormTest < ActionView::TestCase
     assert_equal expected, @horizontal_builder.text_field(:email, help: "This is required")
   end
 
+  test "help messages to look up I18n automatically" do
+    expected = %{<div class="form-group"><label class="control-label" for="user_password">Password</label><input class="form-control" id="user_password" name="user[password]" type="text" value="secret" /><span class="help-block">A good password should be at least six characters long</span></div>}
+    assert_equal expected, @builder.text_field(:password)
+  end
+
+  test "help messages to ignore translation when user disables help" do
+    expected = %{<div class="form-group"><label class="control-label" for="user_password">Password</label><input class="form-control" id="user_password" name="user[password]" type="text" value="secret" /></div>}
+    assert_equal expected, @builder.text_field(:password, help: false)
+  end
+
   test "custom label width for horizontal forms" do
     expected = %{<form accept-charset="UTF-8" action="/users" class="form-horizontal" id="new_user" method="post"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /></div><div class="form-group"><label class="control-label col-sm-1" for="user_email">Email</label><div class="col-sm-10"><input class="form-control" id="user_email" name="user[email]" type="email" value="steve@example.com" /></div></div></form>}
     assert_equal expected, bootstrap_form_for(@user, layout: :horizontal) { |f| f.email_field :email, label_col: 'col-sm-1' }
@@ -425,7 +453,7 @@ class BootstrapFormTest < ActionView::TestCase
       %{<p class="form-control-static">Bar</p>}.html_safe
     end
 
-    expected = %{<div class="form-group"><label class="control-label col-sm-2"></label><div class="col-sm-10"><p class="form-control-static">Bar</p></div></div>}
+    expected = %{<div class="form-group"><div class="col-sm-10 col-sm-offset-2"><p class="form-control-static">Bar</p></div></div>}
     assert_equal expected, output
   end
 
@@ -443,7 +471,7 @@ class BootstrapFormTest < ActionView::TestCase
       %{<p class="form-control-static">Bar</p>}.html_safe
     end
 
-    expected = %{<div class="form-group foo"><label class="control-label col-sm-2"></label><div class="col-sm-10"><p class="form-control-static">Bar</p></div></div>}
+    expected = %{<div class="form-group foo"><div class="col-sm-10 col-sm-offset-2"><p class="form-control-static">Bar</p></div></div>}
     assert_equal expected, output
   end
 
@@ -452,7 +480,7 @@ class BootstrapFormTest < ActionView::TestCase
       %{<p class="form-control-static">Bar</p>}.html_safe
     end
 
-    expected = %{<div class="form-group foo"><label class="control-label col-sm-2"></label><div class="col-sm-10"><p class="form-control-static">Bar</p></div></div>}
+    expected = %{<div class="form-group foo"><div class="col-sm-10 col-sm-offset-2"><p class="form-control-static">Bar</p></div></div>}
     assert_equal expected, output
   end
 
@@ -469,6 +497,15 @@ class BootstrapFormTest < ActionView::TestCase
     end
 
     expected = %{<div class="form-group"><label class="control-label col-sm-2" for="user_">My Label</label><div class="col-sm-10"><p class="form-control-static">this is a test</p></div></div>}
+    assert_equal expected, output
+  end
+
+  test "static control doesn't require a name" do
+    output = @horizontal_builder.static_control label: "Custom Label" do
+      "Custom Control"
+    end
+
+    expected = %{<div class="form-group"><label class="control-label col-sm-2" for="user_">Custom Label</label><div class="col-sm-10"><p class="form-control-static">Custom Control</p></div></div>}
     assert_equal expected, output
   end
 
@@ -661,6 +698,80 @@ class BootstrapFormTest < ActionView::TestCase
     expected = %{<div class="form-group"><label class="control-label" for="user_misc">Misc</label><div class="checkbox"><label for="user_misc_1"><input checked="checked" id="user_misc_1" name="user[misc][]" type="checkbox" value="1" /> Foo</label></div><div class="checkbox"><label for="user_misc_2"><input id="user_misc_2" name="user[misc][]" type="checkbox" value="2" /> Bar</label></div></div>}
 
     assert_equal expected, @builder.collection_check_boxes(:misc, collection, :id, :street, checked: 1)
+    assert_equal expected, @builder.collection_check_boxes(:misc, collection, :id, :street, checked: collection.first)
   end
 
+  test 'collection_check_boxes renders with multiple checked options correctly' do
+    collection = [Address.new(id: 1, street: 'Foo'), Address.new(id: 2, street: 'Bar')]
+    expected = %{<div class="form-group"><label class="control-label" for="user_misc">Misc</label><div class="checkbox"><label for="user_misc_1"><input checked="checked" id="user_misc_1" name="user[misc][]" type="checkbox" value="1" /> Foo</label></div><div class="checkbox"><label for="user_misc_2"><input checked="checked" id="user_misc_2" name="user[misc][]" type="checkbox" value="2" /> Bar</label></div></div>}
+
+    assert_equal expected, @builder.collection_check_boxes(:misc, collection, :id, :street, checked: [1, 2])
+    assert_equal expected, @builder.collection_check_boxes(:misc, collection, :id, :street, checked: collection)
+  end
+
+  test 'errors_on hide attribute name in message' do
+    @user.email = nil
+    @user.valid?
+
+    expected = %{<div class="alert alert-danger">can&#39;t be blank, is too short (minimum is 5 characters)</div>}
+
+    assert_equal expected, @builder.errors_on(:email, hide_attribute_name: true)
+  end
+
+  test "doesn't throw undefined method error when the content block returns nil" do
+    output = @builder.form_group :nil, label: { text: 'Foo' } do
+      nil
+    end
+
+    expected = %{<div class="form-group"><label class="control-label" for="user_nil">Foo</label></div>}
+    assert_equal expected, output
+  end
+
+  test "adds class to wrapped form_group by a field" do
+    expected = %{<div class="form-group none-margin"><label class="control-label" for="user_misc">Misc</label><input class="form-control" id="user_misc" name="user[misc]" type="search" /></div>}
+    assert_equal expected, @builder.search_field(:misc, wrapper_class: 'none-margin')
+  end
+
+  test "adds class to wrapped form_group by a field with errors" do
+    @user.email = nil
+    @user.valid?
+
+    expected = %{<div class="form-group none-margin has-error"><div class="field_with_errors"><label class="control-label" for="user_email">Email</label></div><div class="field_with_errors"><input class="form-control" id="user_email" name="user[email]" type="email" /></div><span class="help-block">can&#39;t be blank, is too short (minimum is 5 characters)</span></div>}
+    assert_equal expected, @builder.email_field(:email, wrapper_class: 'none-margin')
+  end
+
+  test "adds class to wrapped form_group by a field with errors when bootstrap_form_for is used" do
+    @user.email = nil
+    @user.valid?
+
+    output = bootstrap_form_for(@user) do |f|
+      f.text_field(:email, help: 'This is required', wrapper_class: 'none-margin')
+    end
+
+    expected = %{<form accept-charset="UTF-8" action="/users" class="new_user" id="new_user" method="post"><div style="margin:0;padding:0;display:inline"><input name="utf8" type="hidden" value="&#x2713;" /></div><div class="form-group none-margin has-error"><label class="control-label" for="user_email">Email</label><input class="form-control" id="user_email" name="user[email]" type="text" /><span class="help-block">can&#39;t be blank, is too short (minimum is 5 characters)</span></div></form>}
+    assert_equal expected, output
+  end
+
+  test "adds offset for form_group without label" do
+    output = @horizontal_builder.form_group do
+      @horizontal_builder.submit
+    end
+
+    expected = %{<div class="form-group"><div class="col-sm-10 col-sm-offset-2"><input class="btn btn-default" name="commit" type="submit" value="Create User" /></div></div>}
+    assert_equal expected, output
+  end
+
+  test "adds offset for form_group without label but specific label_col" do
+    output = @horizontal_builder.form_group label_col: 'col-sm-5', control_col: 'col-sm-8' do
+      @horizontal_builder.submit
+    end
+
+    expected = %{<div class="form-group"><div class="col-sm-8 col-sm-offset-5"><input class="btn btn-default" name="commit" type="submit" value="Create User" /></div></div>}
+    assert_equal expected, output
+  end
+
+  test "adding an icon to a field" do
+    expected = %{<div class="form-group has-feedback"><label class="control-label" for="user_misc">Misc</label><input class="form-control" id="user_misc" name="user[misc]" type="email" /><span class="glyphicon glyphicon-ok form-control-feedback"></span></div>}
+    assert_equal expected, @builder.email_field(:misc, icon: 'ok')
+  end
 end

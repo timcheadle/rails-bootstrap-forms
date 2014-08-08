@@ -17,7 +17,7 @@ module BootstrapForm
         if object.respond_to?(:errors) && object.errors.full_messages.any?
           content_tag :div, class: css do
             concat content_tag :p, title
-            concat error_summary unless inline_errors || options[:error_summary] == false
+            concat error_summary unless options[:error_summary] == false
           end
         end
       end
@@ -30,15 +30,24 @@ module BootstrapForm
         end
       end
 
-      def errors_on(name)
+      def errors_on(name, options = {})
         if has_error?(name)
+          hide_attribute_name = options[:hide_attribute_name] || false
+
           content_tag :div, class: "alert alert-danger" do
-            object.errors.full_messages_for(name).join(", ")
+            if hide_attribute_name
+              object.errors[name].join(", ")
+            else
+              object.errors.full_messages_for(name).join(", ")
+            end
           end
         end
       end
 
-      def static_control(name, options = {}, &block)
+      def static_control(*args, &block)
+        options = args.extract_options!
+        name = args.first
+
         html = if block_given?
           capture(&block)
         else

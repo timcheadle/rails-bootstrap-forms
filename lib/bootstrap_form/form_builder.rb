@@ -27,59 +27,79 @@ module BootstrapForm
     end
 
     FIELD_HELPERS.each do |method_name|
-      define_method(method_name) do |name, options = {}|
+      with_method_name = "#{method_name}_with_bootstrap"
+      without_method_name = "#{method_name}_without_bootstrap"
+
+      define_method(with_method_name) do |name, options = {}|
         form_group_builder(name, options) do
           prepend_and_append_input(options) do
-            super(name, options)
+            send(without_method_name, name, options)
           end
         end
       end
+
+      alias_method_chain method_name, :bootstrap
     end
 
     DATE_SELECT_HELPERS.each do |method_name|
-      define_method(method_name) do |name, options = {}, html_options = {}|
+      with_method_name = "#{method_name}_with_bootstrap"
+      without_method_name = "#{method_name}_without_bootstrap"
+
+      define_method(with_method_name) do |name, options = {}, html_options = {}|
         form_group_builder(name, options, html_options) do
-          content_tag(:div, super(name, options, html_options), class: control_specific_class(method_name))
+          content_tag(:div, send(without_method_name, name, options, html_options), class: control_specific_class(method_name))
         end
       end
+
+      alias_method_chain method_name, :bootstrap
     end
 
-    def file_field(name, options = {})
+    def file_field_with_bootstrap(name, options = {})
       form_group_builder(name, options.reverse_merge(control_class: nil)) do
-        super(name, options)
+        file_field_without_bootstrap(name, options)
       end
     end
 
-    def select(method, choices, options = {}, html_options = {})
+    alias_method_chain :file_field, :bootstrap
+
+    def select_with_bootstrap(method, choices, options = {}, html_options = {})
       form_group_builder(method, options, html_options) do
-        super(method, choices, options, html_options)
+        select_without_bootstrap(method, choices, options, html_options)
       end
     end
 
-    def collection_select(method, collection, value_method, text_method, options = {}, html_options = {})
+    alias_method_chain :select, :bootstrap
+
+    def collection_select_with_bootstrap(method, collection, value_method, text_method, options = {}, html_options = {})
       form_group_builder(method, options, html_options) do
-        super(method, collection, value_method, text_method, options, html_options)
+        collection_select_without_bootstrap(method, collection, value_method, text_method, options, html_options)
       end
     end
 
-    def grouped_collection_select(method, collection, group_method, group_label_method, option_key_method, option_value_method, options = {}, html_options = {})
+    alias_method_chain :collection_select, :bootstrap
+
+    def grouped_collection_select_with_bootstrap(method, collection, group_method, group_label_method, option_key_method, option_value_method, options = {}, html_options = {})
       form_group_builder(method, options, html_options) do
-        super(method, collection, group_method, group_label_method, option_key_method, option_value_method, options, html_options)
+        grouped_collection_select_without_bootstrap(method, collection, group_method, group_label_method, option_key_method, option_value_method, options, html_options)
       end
     end
 
-    def time_zone_select(method, priority_zones = nil, options = {}, html_options = {})
+    alias_method_chain :grouped_collection_select, :bootstrap
+
+    def time_zone_select_with_bootstrap(method, priority_zones = nil, options = {}, html_options = {})
       form_group_builder(method, options, html_options) do
-        super(method, priority_zones, options, html_options)
+        time_zone_select_without_bootstrap(method, priority_zones, options, html_options)
       end
     end
 
-    def check_box(name, options = {}, checked_value = "1", unchecked_value = "0", &block)
+    alias_method_chain :time_zone_select, :bootstrap
+
+    def check_box_with_bootstrap(name, options = {}, checked_value = "1", unchecked_value = "0", &block)
       options = options.symbolize_keys!
 
-      html = super(name, options.except(:label, :help, :inline), checked_value, unchecked_value)
+      html = check_box_without_bootstrap(name, options.except(:label, :help, :inline), checked_value, unchecked_value)
       label_content = block_given? ? capture(&block) : options[:label]
-      html.concat(" ").concat(label_content || object.class.human_attribute_name(name) || name.to_s.humanize)
+      html.concat(" ").concat(label_content || (object && object.class.human_attribute_name(name)) || name.to_s.humanize)
 
       label_name = name
       label_name = "#{name}_#{checked_value}" if options[:multiple]
@@ -93,11 +113,13 @@ module BootstrapForm
       end
     end
 
-    def radio_button(name, value, *args)
+    alias_method_chain :check_box, :bootstrap
+
+    def radio_button_with_bootstrap(name, value, *args)
       options = args.extract_options!.symbolize_keys!
       args << options.except(:label, :help, :inline)
 
-      html = super(name, value, *args) + " " + options[:label]
+      html = radio_button_without_bootstrap(name, value, *args) + " " + options[:label]
 
       if options[:inline]
         label(name, html, class: "radio-inline", value: value)
@@ -107,6 +129,8 @@ module BootstrapForm
         end
       end
     end
+
+    alias_method_chain :radio_button, :bootstrap
 
     def collection_check_boxes(*args)
       inputs_collection(*args) do |name, value, options|
@@ -137,29 +161,43 @@ module BootstrapForm
 
       options[:class] = ["form-group", options[:class]].compact.join(' ')
       options[:class] << " #{error_class}" if has_error?(name)
+      options[:class] << " #{feedback_class}" if options[:icon]
 
-      label = generate_label(options[:id], name, options[:label], options[:label_col], options[:layout])
+      label = generate_label(options[:id], name, options[:label], options[:label_col], options[:layout]) if options[:label]
       control_and_help = capture(&block).concat(generate_help(name, options[:help]))
+
+      control = capture(&block).to_s
+      control.concat(generate_help(name, options[:help]).to_s)
+      control.concat(generate_icon(options[:icon])) if options[:icon]
+
       if get_group_layout(options[:layout]) == :horizontal
-        control_and_help = content_tag(:div, control_and_help, class: (options[:control_col] || control_col))
+        control_class = (options[:control_col] || control_col)
+
+        unless options[:label]
+          control_offset = offset_col(/([0-9]+)$/.match(options[:label_col] || default_label_col))
+          control_class.concat(" #{control_offset}")
+        end
+        control = content_tag(:div, control, class: control_class)
       end
 
       if options[:no_form_group]
         label + control_and_help
       else
         content_tag(:div, options.except(:id, :label, :help, :label_col, :control_col, :layout)) do
-          concat(label).concat(control_and_help)
+          concat(label).concat(control)
         end
       end
     end
 
-    def fields_for(record_name, record_object = nil, fields_options = {}, &block)
+    def fields_for_with_bootstrap(record_name, record_object = nil, fields_options = {}, &block)
       fields_options, record_object = record_object, nil if record_object.is_a?(Hash) && record_object.extractable_options?
       fields_options[:layout] ||= options[:layout]
       fields_options[:label_col] = fields_options[:label_col].present? ? "#{fields_options[:label_col]} #{label_class}" : options[:label_col]
       fields_options[:control_col] ||= options[:control_col]
-      super(record_name, record_object, fields_options, &block)
+      fields_for_without_bootstrap(record_name, record_object, fields_options, &block)
     end
+
+    alias_method_chain :fields_for, :bootstrap
 
     private
 
@@ -173,6 +211,10 @@ module BootstrapForm
 
     def default_label_col
       "col-sm-2"
+    end
+
+    def offset_col(offset)
+      "col-sm-offset-#{offset}"
     end
 
     def default_control_col
@@ -193,6 +235,10 @@ module BootstrapForm
 
     def error_class
       "has-error"
+    end
+
+    def feedback_class
+      "has-feedback"
     end
 
     def control_specific_class(method)
@@ -216,13 +262,19 @@ module BootstrapForm
 
       label = options.delete(:label)
       label_class = hide_class if options.delete(:hide_label)
+      wrapper_class = options.delete(:wrapper_class)
       help = options.delete(:help)
+      icon = options.delete(:icon)
       label_col = options.delete(:label_col)
       control_col = options.delete(:control_col)
       layout = get_group_layout(options.delete(:layout))
       no_form_group = options.delete(:no_form_group)
 
+<<<<<<< HEAD
       form_group(method, id: options[:id], label: { text: label, class: label_class }, help: help, label_col: label_col, control_col: control_col, layout: layout, no_form_group: no_form_group) do
+=======
+      form_group(method, id: options[:id], label: { text: label, class: label_class }, help: help, icon: icon, label_col: label_col, control_col: control_col, layout: layout, class: wrapper_class) do
+>>>>>>> upstream/master
         yield
       end
     end
@@ -234,6 +286,7 @@ module BootstrapForm
     end
 
     def generate_label(id, name, options, custom_label_col, group_layout)
+<<<<<<< HEAD
       if options
         options[:for] = id if acts_like_form_tag
         classes = [options[:class], label_class]
@@ -257,6 +310,26 @@ module BootstrapForm
     def generate_help(name, help_text)
       help_text = get_error_messages(name) if has_error?(name) && inline_errors
       content_tag(:span, help_text, class: "help-block") if help_text
+=======
+      options[:for] = id if acts_like_form_tag
+      classes = [options[:class], label_class]
+      classes << (custom_label_col || label_col) if get_group_layout(group_layout) == :horizontal
+      options[:class] = classes.compact.join(" ")
+
+      label(name, options[:text], options.except(:text))
+    end
+
+    def generate_help(name, help_text)
+      help_text = object.errors[name].join(", ") if has_error?(name) && inline_errors
+      return if help_text === false
+
+      help_text ||= I18n.t(name, scope: "activerecord.help.#{object.class.to_s.downcase}", default: '')
+      content_tag(:span, help_text, class: 'help-block') if help_text.present?
+    end
+
+    def generate_icon(icon)
+      content_tag(:span, "", class: "glyphicon glyphicon-#{icon} form-control-feedback")
+>>>>>>> upstream/master
     end
 
     def get_error_messages(name)
@@ -269,7 +342,13 @@ module BootstrapForm
 
         collection.each do |obj|
           input_options = options.merge(label: obj.send(text))
-          input_options[:checked] = input_options[:checked] == obj.send(value) if input_options[:checked]
+
+          if checked = input_options[:checked]
+            input_options[:checked] = checked == obj.send(value)              ||
+                                      checked.try(:include?, obj.send(value)) ||
+                                      checked == obj                          ||
+                                      checked.try(:include?, obj)
+          end
 
           input_options.delete(:class)
           inputs << block.call(name, obj.send(value), input_options)
