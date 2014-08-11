@@ -180,7 +180,7 @@ module BootstrapForm
       end
 
       if options[:no_form_group]
-        label + control_and_help
+        label + control
       else
         content_tag(:div, options.except(:id, :label, :help, :label_col, :control_col, :layout)) do
           concat(label).concat(control)
