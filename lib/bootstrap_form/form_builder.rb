@@ -193,6 +193,8 @@ module BootstrapForm
       fields_options[:layout] ||= options[:layout]
       fields_options[:label_col] = fields_options[:label_col].present? ? "#{fields_options[:label_col]} #{label_class}" : options[:label_col]
       fields_options[:control_col] ||= options[:control_col]
+      fields_options[:inline_errors] ||= options[:inline_errors]
+      fields_options[:label_errors] ||= options[:label_errors]
       fields_for_without_bootstrap(record_name, record_object, fields_options, &block)
     end
 
