@@ -133,10 +133,11 @@ module BootstrapForm
     alias_method_chain :radio_button, :bootstrap
 
     def collection_check_boxes(*args)
-      inputs_collection(*args) do |name, value, options|
+      html = inputs_collection(*args) do |name, value, options|
         options[:multiple] = true
         check_box(name, options, value, nil)
       end
+      hidden_field(args.first,{value: "", multiple: true}).concat(html)
     end
 
     def collection_radio_buttons(*args)
@@ -264,6 +265,7 @@ module BootstrapForm
       label = options.delete(:label)
       label_class = hide_class if options.delete(:hide_label)
       wrapper_class = options.delete(:wrapper_class)
+      wrapper_options = options.delete(:wrapper)
       help = options.delete(:help)
       icon = options.delete(:icon)
       label_col = options.delete(:label_col)
@@ -271,7 +273,26 @@ module BootstrapForm
       layout = get_group_layout(options.delete(:layout))
       no_form_group = options.delete(:no_form_group)
 
-      form_group(method, id: options[:id], label: { text: label, class: label_class }, help: help, icon: icon, label_col: label_col, control_col: control_col, layout: layout, class: wrapper_class, no_form_group: no_form_group) do
+      form_group_options = {
+        id: options[:id],
+        label: {
+          text: label,
+          class: label_class
+        },
+        help: help,
+        icon: icon,
+        label_col: label_col,
+        control_col: control_col,
+        layout: layout,
+        class: wrapper_class,
+        no_form_group: no_form_group
+      }
+
+      if wrapper_options.is_a?(Hash)
+        form_group_options.reverse_merge!(wrapper_options)
+      end
+
+      form_group(method, form_group_options) do
         yield
       end
     end

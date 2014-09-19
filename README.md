@@ -39,7 +39,7 @@ To get started, just use the `bootstrap_form_for` helper. Here's an example:
   <%= f.email_field :email %>
   <%= f.password_field :password %>
   <%= f.check_box :remember_me %>
-  <%= f.submit %>
+  <%= f.submit "Log In" %>
 <% end %>
 ```
 
@@ -189,22 +189,32 @@ You can also prepend and append buttons. Note: The buttons must contain the
 <%= f.text_field :search, append: link_to("Go", "#", class: "btn btn-default") %>
 ```
 
-### Additional Form Group Classes
+### Additional Form Group Attributes
 
-If you want to add an additional css class to the form group div, you can use
-the `wrapper_class: 'additional-class'` option.
+If you want to add an additional css class or any other attribute to the form group div, you can use
+the `wrapper: { class: 'additional-class', data: { foo: 'bar' } }` option.
 
 ```erb
-<%= f.text_field :name, wrapper_class: 'has-warning' %>
+<%= f.text_field :name, wrapper: { class: 'has-warning', data: { foo: 'bar' } } %>
 ```
 
 Which produces the following output:
 
 ```erb
-<div class="form-group has-warning">
+<div class="form-group has-warning" data-foo="bar">
   <label class="control-label" for="user_name">Id</label>
   <input class="form-control" id="user_name" name="user[name]" type="text">
 </div>
+```
+
+You still can use `wrapper_class` option to set only a css class. This is just a short form of `wrapper: { class: 'additional-class' }`.
+
+### Selects
+
+Our select helper accepts the same arguments as the [default Rails helper](http://api.rubyonrails.org/classes/ActionView/Helpers/FormOptionsHelper.html#method-i-select). Here's an example of how you pass both options and html_options hashes:
+
+```erb
+<%= f.select :product, [[1, "Apple"], [2, "Grape"]], { label: "Choose your favorite fruit:" }, { class: "selectpicker" } %>
 ```
 
 ### Checkboxes and Radios
